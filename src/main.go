@@ -1,18 +1,17 @@
 package main
 
 import (
-	"fmt"
-
 	"github.com/WilhelmWeber/go_ruby/src/evaluator"
+	"github.com/WilhelmWeber/go_ruby/src/filereader"
 	"github.com/WilhelmWeber/go_ruby/src/lexer"
 	"github.com/WilhelmWeber/go_ruby/src/parser"
 )
 
 func main() {
-	Token := lexer.Tokenize("( 52 + 4 ) * 3")
-	parser := parser.Parser{Token: Token, Index: 0}
-	tree := parser.Expr()
-
-	result := evaluator.Evaluator(tree)
-	fmt.Println(result)
+	result := filereader.Reader("test.text")
+	tokens := lexer.Tokenize(result)
+	var env_parser []string
+	p := parser.Parser{Token: tokens, Index: 0, Env: env_parser}
+	tree := p.Parse()
+	evaluator.SenteceEval(tree)
 }
