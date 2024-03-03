@@ -8,10 +8,12 @@ import (
 )
 
 func main() {
+
 	result := filereader.Reader("test.text")
 	tokens := lexer.Tokenize(result)
 	var env_parser []string
 	p := parser.Parser{Token: tokens, Index: 0, Env: env_parser}
 	tree := p.Parse()
 	evaluator.SenteceEval(tree)
+
 }

@@ -28,9 +28,11 @@ const (
 	ND_ASN // 変数代入
 	ND_IDT // 識別子
 	ND_REF // 変数参照
-	ND_IF  //IF文
-	ND_WHL //While文
-	ND_BLC //ブロック文
+	ND_IF  // IF文
+	ND_WHL // While文
+	ND_BLC // ブロック文
+	ND_RTN // return
+	ND_DEF // 関数定義
 	ND_FNC // 関数呼び出し 現時点ではprintlnのみ対応
 )
 
@@ -39,13 +41,14 @@ type Node struct {
 	Lhs     *Node
 	Rhs     *Node
 	Val     int
-	Str     string  //変数の管理用
-	FncName string  //呼び出す関数の名前
-	FncArg  *Node   //関数の引数
-	If      *Node   //条件式
-	Then    *Node   //条件式が1だったときに実行する処理
-	Else    *Node   //条件式が0だったときに実行する処理
-	Stmts   []*Node //ブロック内の複文
+	Str     string   //変数の管理用
+	CallArg []*Node  //関数呼び出しの引数
+	If      *Node    //条件式
+	Then    *Node    //条件式が1だったときに実行する処理
+	Else    *Node    //条件式が0だったときに実行する処理
+	Stmts   []*Node  //ブロック内の複文
+	Args    []string //関数定義の時の引数
+	Flow    *Node    //関数であったときの処理
 }
 
 // methods
@@ -127,6 +130,34 @@ func (parser *Parser) stmt() *Node {
 			stmts = append(stmts, stmt)
 		}
 		return &Node{Kind: ND_BLC, Stmts: stmts}
+	}
+	if parser.consume("fn") {
+		var args []string
+		funcname, isIdent := parser.consume_ident()
+		if !isIdent {
+			panic("Not named Function")
+		}
+		parser.expect("(")
+		for {
+			arg, _ := parser.consume_ident()
+			args = append(args, arg)
+			//関数ブロックの識別子を変数参照にしたいためにparser.Envにpush
+			parser.Env = append(parser.Env, arg)
+			if parser.consume(")") {
+				break
+			}
+			parser.expect(",")
+		}
+		flow := parser.stmt()
+		//parser.Envにプッシュした引数変数を削除してparser.Envをセットしなおす
+		parser.Env = envDelate(parser.Env, args)
+		return &Node{Kind: ND_DEF, Args: args, Flow: flow, Str: funcname}
+	}
+	if parser.consume("return") {
+		rhs := parser.expr()
+		node := &Node{Kind: ND_RTN, Rhs: rhs}
+		parser.expect(";")
+		return node
 	}
 	node := parser.expr()
 	parser.expect(";")
@@ -229,9 +260,16 @@ func (parser *Parser) primary() *Node {
 	if str, isIdent := parser.consume_ident(); isIdent {
 		//括弧が次に来れば関数呼び出しのはず
 		if parser.consume("(") {
-			arg := parser.expr()
-			parser.expect(")")
-			return &Node{Kind: ND_FNC, FncName: "p", FncArg: arg} //まだprintln関数しかないので
+			var args []*Node
+			for {
+				arg := parser.expr()
+				args = append(args, arg)
+				if parser.consume(")") {
+					break
+				}
+				parser.expect(",")
+			}
+			return &Node{Kind: ND_FNC, Str: str, CallArg: args}
 		} else {
 			if isIn(parser.Env, str) {
 				//既出の変数が含まれていれば参照として扱う
@@ -255,4 +293,16 @@ func isIn(slice []string, str string) bool {
 		}
 	}
 	return false
+}
+
+func envDelate(envs []string, args []string) []string {
+	var slice []string
+	for _, env := range envs {
+		if isIn(args, env) {
+			continue
+		} else {
+			slice = append(slice, env)
+		}
+	}
+	return slice
 }

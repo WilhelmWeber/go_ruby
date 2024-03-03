@@ -29,6 +29,8 @@ func Tokenize(s string) []Token {
 	iftoken := []rune("if")
 	whiletoken := []rune("while")
 	elsetoken := []rune("else")
+	functoken := []rune("fn")
+	returntoken := []rune("return")
 
 	i := 0
 	for i < len(rs) {
@@ -37,7 +39,7 @@ func Tokenize(s string) []Token {
 			i++
 			continue
 		}
-		if rs[i] == '+' || rs[i] == '-' || rs[i] == '*' || rs[i] == '/' || rs[i] == ';' || rs[i] == '{' || rs[i] == '}' {
+		if rs[i] == '+' || rs[i] == '-' || rs[i] == '*' || rs[i] == '/' || rs[i] == ';' || rs[i] == '{' || rs[i] == '}' || rs[i] == ',' {
 			tok := Token{Kind: TK_RESERVED, Str: string(rs[i])}
 			result = append(result, tok)
 			i++
@@ -142,6 +144,16 @@ func Tokenize(s string) []Token {
 			}
 			if isEqaulSlice(charrune, whiletoken) {
 				tok := Token{Kind: TK_RESERVED, Str: "while"}
+				result = append(result, tok)
+				continue
+			}
+			if isEqaulSlice(charrune, functoken) {
+				tok := Token{Kind: TK_RESERVED, Str: "fn"}
+				result = append(result, tok)
+				continue
+			}
+			if isEqaulSlice(charrune, returntoken) {
+				tok := Token{Kind: TK_RESERVED, Str: "return"}
 				result = append(result, tok)
 				continue
 			}
